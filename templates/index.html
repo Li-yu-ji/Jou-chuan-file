@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>就船文件</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+        }
+        .upload-section {
+            margin: 20px 0;
+            padding: 20px;
+            border: 2px dashed #ccc;
+            border-radius: 8px;
+            text-align: center;
+        }
+        .upload-buttons {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            margin-top: 10px;
+        }
+        .upload-btn {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        .upload-btn:hover {
+            background-color: #0056b3;
+        }
+        .file-list {
+            margin-top: 20px;
+        }
+        .file-list-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        .header-buttons {
+            display: flex;
+            gap: 10px;
+        }
+        .download-all-btn {
+            background-color: #28a745;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            text-decoration: none;
+        }
+        .download-all-btn:hover {
+            background-color: #218838;
+        }
+        .delete-all-btn {
+            background-color: #dc3545;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        .delete-all-btn:hover {
+            background-color: #c82333;
+        }
+        .file-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            padding: 10px;
+            border-bottom: 1px solid #eee;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        .file-name {
+            word-break: break-all;
+            flex: 1;
+            min-width: 0;
+            margin-right: 10px;
+        }
+        .download-link {
+            color: #007bff;
+            text-decoration: none;
+            white-space: nowrap;
+        }
+        .download-link:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>就船文件</h1>
+        
+        <div class="upload-section">
+            <h2>上传文件</h2>
+            <form action="{{ url_for('upload_file') }}" method="post" enctype="multipart/form-data">
+                <div class="upload-buttons">
+                    <input type="file" name="file" required>
+                    <input type="submit" value="上传文件" class="upload-btn">
+                </div>
+            </form>
+            <form action="{{ url_for('upload_file') }}" method="post" enctype="multipart/form-data">
+                <div class="upload-buttons">
+                    <input type="file" name="file" webkitdirectory directory multiple>
+                    <input type="submit" value="上传文件夹" class="upload-btn">
+                </div>
+            </form>
+        </div>
+
+        <div class="file-list">
+            <div class="file-list-header">
+                <h2>可下载文件</h2>
+                {% if files %}
+                <div class="header-buttons">
+                    <a href="{{ url_for('download_all') }}" class="download-all-btn">下载全部</a>
+                    <form action="{{ url_for('delete_all') }}" method="post" onsubmit="return confirm('确定要删除所有文件吗？');">
+                        <button type="submit" class="delete-all-btn">删除所有文件</button>
+                    </form>
+                </div>
+                {% endif %}
+            </div>
+            {% if files %}
+                {% for file in files %}
+                <div class="file-item">
+                    <span class="file-name">{{ file }}</span>
+                    <a href="{{ url_for('download_file', filename=file) }}" class="download-link">下载</a>
+                </div>
+                {% endfor %}
+            {% else %}
+                <p>暂无文件</p>
+            {% endif %}
+        </div>
+    </div>
+</body>
+</html>
