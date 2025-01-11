@@ -3,6 +3,13 @@ import os
 import shutil  # 添加shutil模块用于删除文件夹
 import zipfile  # 添加zipfile模块用于创建zip文件
 import tempfile  # 添加tempfile模块用于创建临时文件
+import mimetypes  # 添加mimetypes模块用于判断文件类型
+
+# 添加更多视频格式的 MIME 类型
+mimetypes.add_type('application/x-mpegURL', '.m3u8')
+mimetypes.add_type('video/MP2T', '.ts')
+mimetypes.add_type('video/vnd.dlna.mpeg-tts', '.ts')
+mimetypes.add_type('video/mpeg', '.ts')
 
 app = Flask(__name__)
 app.config['UPLOAD_FOLDER'] = 'uploads'
@@ -10,6 +17,23 @@ app.config['MAX_CONTENT_LENGTH'] = 2 * 1024 * 1024 * 1024  # 2GB max file size
 
 # 确保上传文件夹存在
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
+
+def is_previewable(filename):
+    """判断文件是否可以预览"""
+    mime_type, _ = mimetypes.guess_type(filename)
+    if mime_type:
+        return mime_type.startswith(('text/', 'image/', 'application/pdf', 'audio/', 'video/'))
+    return False
+
+def get_file_content(filepath, max_size=100000):
+    """获取文件内容，限制大小以防止内存溢出"""
+    try:
+        if os.path.getsize(filepath) > max_size:
+            return None
+        with open(filepath, 'r', encoding='utf-8') as f:
+            return f.read()
+    except (UnicodeDecodeError, IOError):
+        return None
 
 @app.route('/')
 def index():
@@ -100,6 +124,54 @@ def delete_all():
     except Exception as e:
         print(f"Error deleting files: {e}")
         return "删除文件时出错", 500
+
+@app.route('/preview/<path:filename>')
+def preview_file(filename):
+    filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+    if not os.path.exists(filepath):
+        return "文件不存在", 404
+        
+    mime_type, _ = mimetypes.guess_type(filename)
+    
+    # 如果是图片，直接显示
+    if mime_type and mime_type.startswith('image/'):
+        return send_file(filepath)
+    
+    # 如果是文本文件，读取内容
+    if mime_type and mime_type.startswith('text/'):
+        content = get_file_content(filepath)
+        if content is not None:
+            return render_template('preview.html', 
+                                filename=filename,
+                                content=content,
+                                file_type='text')
+    
+    # 如果是PDF，提供嵌入式预览
+    if mime_type == 'application/pdf':
+        return render_template('preview.html',
+                             filename=filename,
+                             file_path=url_for('download_file', filename=filename),
+                             file_type='pdf')
+    
+    # 如果是音频文件
+    if mime_type and mime_type.startswith('audio/'):
+        return render_template('preview.html',
+                             filename=filename,
+                             file_path=url_for('download_file', filename=filename),
+                             file_type='audio',
+                             mime_type=mime_type)
+    
+    # 如果是视频文件或TS流
+    if (mime_type and mime_type.startswith('video/')) or \
+       (filename.lower().endswith('.ts')) or \
+       (mime_type and mime_type in ['application/x-mpegURL']):
+        return render_template('preview.html',
+                             filename=filename,
+                             file_path=url_for('download_file', filename=filename),
+                             file_type='video',
+                             mime_type=mime_type if mime_type else 'video/MP2T')
+    
+    return "此文件类型不支持预览", 400
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=True)
